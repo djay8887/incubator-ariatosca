@@ -21,6 +21,7 @@ import platform
 from sqlalchemy import (
     create_engine,
     orm,
+    event
 )
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import StaleDataError
@@ -405,11 +406,17 @@ def init_storage(base_dir, filename='db.sqlite'):
 
         path=os.path.join(base_dir, filename))
 
-    engine = create_engine(uri, connect_args=dict(timeout=15))
+    engine = create_engine(uri)
+    event.listen(engine, 'connect', do_connect)
+
     session_factory = orm.sessionmaker(bind=engine)
     session = orm.scoped_session(session_factory=session_factory)
 
     return dict(engine=engine, session=session)
+
+
+def do_connect(dbapi_connection, _):
+    dbapi_connection.isolation_level = None
 
 
 class ListResult(list):
